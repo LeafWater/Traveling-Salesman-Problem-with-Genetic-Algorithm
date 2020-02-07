@@ -1,0 +1,517 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+public class start {
+
+	static int n;
+	static int m; //liczba osobników
+	static int suma; //suma ocen do ruletki
+	
+	//wczytanie danych miast z pliku
+	public static int[][] odczytajTablice(String wejscie) throws IOException {
+		int licznikLinii=-1; //linia -1 to ilosć miast, linie od 0 odpowiadają za dane do tablicy
+
+		FileReader fileIn = new FileReader("D://Programming//Eclipse//Projekty Eclipse//Pliki pomocnicze//"+wejscie);
+		BufferedReader buff = new BufferedReader(fileIn);
+		n= Integer.parseInt(buff.readLine()); //pierwsza linia pliku zawiera informację o ilości miast
+		m=n;
+		int [][] odleglosci = new int[n][n];
+		licznikLinii++;
+		
+		String linia = buff.readLine();	
+		do {
+				String[] obecnaLinia = linia.split(" "); 
+				for(int i=0; i<obecnaLinia.length; i++)
+				{
+					odleglosci[licznikLinii][i]=Integer.parseInt(obecnaLinia[i]);
+					odleglosci[i][licznikLinii]=Integer.parseInt(obecnaLinia[i]);
+				}
+				licznikLinii++;
+				linia = buff.readLine();
+		} while(linia !=null);
+		
+		buff.close();
+		return odleglosci;
+	}
+	
+	//zbudowanie losowego osobnika
+	public static int[] wylosujOsobnika(int n) {
+		int[] osobnik = new int[n];
+		Random random = new Random();
+		List<Integer> listaLosowania = new ArrayList<>();
+		for (int i =0; i<n;i++) {
+			listaLosowania.add(i);
+		}
+		
+		int indexL=0;
+		for(int i =0; i<n;i++) {
+			indexL=random.nextInt(listaLosowania.size());
+			osobnik[i]=listaLosowania.get(indexL);
+			listaLosowania.remove(indexL);
+		}
+		return osobnik;
+	}
+	
+	public static int[][] createPopulationTable(int n, int m) {		// n-ilość miast ; m-ilość osobników
+		int[][] popTable = new int[m][n];
+		for(int i =0; i<m; i++) {
+			popTable[i]=wylosujOsobnika(n);	
+		}
+		return popTable;
+	}
+	
+	public static int[] opinionTable(int[][] tabCity, int[][] tabPop, int n) {
+		int[] opinionTab = new int[n];
+		
+		for(int i =0; i<opinionTab.length; i++) {
+			int result=0;
+			result += tabCity[tabPop[i][tabPop.length-1]][tabPop[i][0]]; //don't forget about returning from last to first
+			for(int j=0;j<tabPop[i].length-1; j++) { 
+				result += tabCity[tabPop[i][j]][tabPop[i][j+1]]; 
+			}
+			opinionTab[i]=result;
+			result=0;
+		}
+		return opinionTab;
+	}
+	
+	// odwrócenie wartości oceny
+	public static int[] newOpinionTable(int[] opinionTab) {
+		int[] newOpinionTab = new int[n];
+		int max=0;
+		suma=0;
+		for (int i =0; i<opinionTab.length; i++) {
+			if(opinionTab[i]>=max) {
+				max = opinionTab[i];
+			}
+		}
+		for(int i=0; i<opinionTab.length; i++) {
+			newOpinionTab[i] = max+1-opinionTab[i];
+			suma += newOpinionTab[i];
+		}
+		return newOpinionTab;
+	}
+	// nowa tablica osobników do "koła ruletki"
+	public static int[][] createNewPopulationTable(int[][] previousPopulation, int[] newOpinionTab) {
+		int[][] popTable = new int[m][n]; 		
+		int mySum=0;
+		Random ran = new Random();
+		
+		for (int i = 0; i <popTable.length; i++) {
+			int wylosowana = ran.nextInt(suma-1);
+			for (int k=0; k<m; k++) {
+				mySum +=newOpinionTab[k];
+				if(mySum>wylosowana) {
+					popTable[i]=previousPopulation[k];	
+					mySum=0;
+					break;
+				}
+			}
+			continue;
+		}
+		return popTable;
+	}
+	//selekcja turniejowa
+	public static int[][] selectionTournament(int[][] previousPopulation, int[] opinionTab) {
+		int[][] tournamentPopulation = new int[n][n];
+		int k = (int)(0.09*n);							//k needs to be tested to tell what value is the best for you
+		//System.out.println(k);
+		int index, bestIndexK;
+		int[][] kTable=new int[k][n];
+		int bestOpinion=0;
+		Random ran = new Random();
+		
+		for(int i =0; i<n;i++) {
+			bestIndexK =0;
+			
+			for(int j=0; j<k; j++) {
+				index = ran.nextInt(n);
+				kTable[j]=previousPopulation[index];
+				if(opinionTab[index]>=bestOpinion) 	//który najlepszy
+				{
+					bestOpinion=opinionTab[index];
+					bestIndexK=j;
+					//spr
+					/*System.out.println("Przypisanie nowej populacji osobnika: kTable[j]  ");
+					for (int v = 0; v < kTable[j].length; v++) {
+				        System.out.print(kTable[j][v]+ "  ");
+				    }
+				    System.out.println(); */ 
+				}
+			}
+			tournamentPopulation[i]= kTable[bestIndexK];
+		}	
+		return tournamentPopulation;
+	}
+	
+	//krzyżowanie PMX
+	public static void changeGenes(int[] parent, int[] child, int crossPoint1, int crossPoint2, boolean fromBeginning) {
+		int from = 0;
+		int to = crossPoint1;
+		if (!fromBeginning) {
+			from = crossPoint2;
+			to = child.length;
+		}
+		// to list from cP1 to cP2	
+		List listMiddle = new ArrayList();
+		for(int i = crossPoint1; i<crossPoint2; i++) {
+			listMiddle.add(child[i]);
+		}
+		List listChild = new ArrayList();
+		for(int i = 0; i<child.length; i++) {
+			listChild.add(child[i]);
+		}	
+		for(int i = from; i<to; i++) {
+			int gen = parent[i];
+			while (listMiddle.contains(gen)) {
+				if (fromBeginning) {
+					gen = parent[listChild.lastIndexOf(gen)];
+				}
+				else
+				{
+					gen = parent[listChild.indexOf(gen)];
+				}
+			}
+			child[i]= gen;
+		}
+	}
+	
+	public static int[][] crossoverPMX(int[][] population, int k) {
+		int[][] crossedPopulation = new int[population.length][population[0].length];
+		//współczynnik to 75% 
+		int[] first, second;
+		int crossPoint1, crossPoint2; 								//dwa punkty przecięcia
+		Random ran = new Random();
+		
+		if(population.length%2==0 ) {
+			for (int i =0; i<population.length; i+=2) {
+				first = new int[population[0].length];
+				second = new int[population[0].length];
+			
+				if(ran.nextInt(100)<=k) {
+					crossPoint2 = ran.nextInt((population[0].length-2))+1;		//wylosuj punkty przecięcia w długości osobnika crossPoint>_
+					crossPoint1 = ran.nextInt(crossPoint2);							
+
+					//zamień środki
+					for(int j=0; j<population[i].length; j++) {
+						if(j>=crossPoint1 && j<crossPoint2) {
+							first[j] = population[i+1][j];
+							second[j] = population[i][j];
+						}
+						else {
+							first[j]=population[i][j];
+							second[j]=population[i+1][j];
+						}
+					}
+					//zamień brzegi
+					changeGenes(population[i], first, crossPoint1, crossPoint2, true); 
+					changeGenes(population[i], first, crossPoint1, crossPoint2, false);
+					changeGenes(population[i+1], second, crossPoint1, crossPoint2, true);
+					changeGenes(population[i+1], second, crossPoint1, crossPoint2, false);
+					
+					//przypisz  
+					crossedPopulation[i]=first;
+					crossedPopulation[i+1]=second;
+				}
+				else {
+					crossedPopulation[i]=population[i];
+					crossedPopulation[i+1]=population[i+1];
+				}
+			}
+		}
+		else {
+			System.out.println("Populacja nie jest parzysta - nie można przeprowadzić krzyżowania.");
+		}
+		return crossedPopulation;
+	}
+	// Krzyżowanie OX
+	public static int[][] crossoverOX(int[][] population, int k) {
+		int[][] crossedPopulation = new int[population.length][population[0].length];
+		int[] first, second;
+		int crossPoint1, crossPoint2; 
+		List listA = new ArrayList();
+		List listB = new ArrayList();
+		Random ran = new Random();
+		
+		if(population.length%2==0 ) {						//spr parzystości populacji
+			for (int i =0; i<population.length; i+=2) {
+				first = new int[population[0].length];
+				second = new int[population[0].length];
+			
+				if(ran.nextInt(100)<=k) {
+					crossPoint2 = ran.nextInt(population[0].length-2)+1;		//wylosuj punkty przecięcia w długości osobnika crossPoint>
+					crossPoint1 = ran.nextInt(crossPoint2);								
+					int a= crossPoint2;
+					for(int j=a; j<population[0].length; j++) {
+						listA.add(population[i][j]);
+						listB.add(population[i+1][j]);
+					}
+					for(int j=0; j<a;j++) {
+						listA.add(population[i][j]);
+						listB.add(population[i+1][j]);
+					}
+
+					//zamień środki
+					for(int j=0; j<population[i].length; j++) {
+						if(j>=crossPoint1 && j<crossPoint2) {
+							first[j] = population[i+1][j];
+							second[j] = population[i][j];
+						}
+						else {
+							first[j]=-1;
+							second[j]=-1;
+						}
+					}
+					//usuń z list elementy które nie mogą być wykorzystane (wpisane do nowych osobników)
+					for(int l = 0; l<population[0].length; l++) {			
+						if(listA.contains(first[l])) {
+							listA.remove(listA.indexOf(first[l]));
+						}
+						if(listB.contains(second[l])) {
+							listB.remove(listB.indexOf(second[l]));
+						}
+					}
+					//zamień brzegi
+					for(int j=a; j<population[0].length; j++) {
+						first[j]=(int) listA.get(0);
+						listA.remove(0);
+						second[j]=(int) listB.get(0);
+						listB.remove(0);
+					}
+					for(int j=0; j<crossPoint1;j++) {
+						first[j]=(int) listA.get(0);
+						listA.remove(0);
+						second[j]=(int) listB.get(0);
+						listB.remove(0);	
+					}					
+					//przypisz  
+					crossedPopulation[i]=first;
+					crossedPopulation[i+1]=second;
+				}
+				else {
+					crossedPopulation[i]=population[i];
+					crossedPopulation[i+1]=population[i+1];
+				}
+			}
+		}
+		else {
+			System.out.println("Populacja nie jest parzysta - nie można przeprowadzić krzyżowania.");
+		}
+		return crossedPopulation;
+	}
+	// Krzyżowanie UOBX
+	public static int[][] crossoverUOBX(int[][] population, int k) {
+		int[][] crossedPopulation = new int[population.length][population[0].length];
+		Random ran = new Random();
+		
+		for(int i=0; i<population.length; i+=2) {
+			if(ran.nextInt(100)<k) {
+				List listA = new ArrayList();
+				List listB = new ArrayList();
+				for(int j = 0; j<population[0].length; j++) {
+					listA.add(population[i][j]);
+					listB.add(population[i+1][j]);
+					if(ran.nextInt(2)==0) {
+						crossedPopulation[i][j]=population[i][j];
+						crossedPopulation[i+1][j]=(-1);
+					}
+					else {
+						crossedPopulation[i][j]=(-1);
+						crossedPopulation[i+1][j]=population[i+1][j];				
+					}
+				}
+				for(int l = 0; l<population[0].length; l++) {				//usuwa z list elementy które już zostały wykorzystane (wpisane do nowych osobników)
+					if(listA.contains(crossedPopulation[i+1][l])) {
+						listA.remove(listA.indexOf(crossedPopulation[i+1][l]));
+					}
+					if(listB.contains(crossedPopulation[i][l])) {
+						listB.remove(listB.indexOf(crossedPopulation[i][l]));
+					}
+				}
+				for(int p = 0; p<population[0].length; p++) {
+					if(crossedPopulation[i][p]==(-1)) {
+						crossedPopulation[i][p]=(int) listB.get(0);
+						listB.remove(0);
+					}
+					if(crossedPopulation[i+1][p]==(-1)) {
+						crossedPopulation[i+1][p]=(int) listA.get(0);
+						listA.remove(0);
+					}
+				}
+			}
+			else {
+				crossedPopulation[i]= population[i];
+				crossedPopulation[i+1]=population[i+1];
+			}
+		}
+		return crossedPopulation;
+	}
+	
+	//Krzyżowanie CX
+	public static int[][] crossoverCX(int[][] population, int k) {
+		int[][] crossedPopulation = new int[population.length][population[0].length];
+		int indexCycle;
+		Random ran = new Random();
+		
+		for(int i=0; i<population.length; i+=2) {
+			if(ran.nextInt(100)<k) {
+				indexCycle=ran.nextInt(population[0].length);		//nr indexu od którego zaczyna się cykl
+				int gen = population[i][indexCycle];
+				List listB = new ArrayList();
+				List listA = new ArrayList();
+				for(int j=0; j<population[0].length; j++) {
+					listA.add(population[i][j]);
+					listB.add(population[i+1][j]);
+					crossedPopulation[i][j]=(int) listA.get(j);
+					crossedPopulation[i+1][j]=(int) listB.get(j);
+				}
+				
+				while(listB.contains(gen)) {
+					crossedPopulation[i][listA.indexOf(gen)]=population[i+1][listA.indexOf(gen)];
+					crossedPopulation[i+1][listA.indexOf(gen)]=gen;
+							
+					gen=population[i][listB.indexOf(gen)];
+					if(gen==population[i][indexCycle]) {	
+						break;
+					}	
+				}
+			}
+			else {
+				crossedPopulation[i]= population[i];
+				crossedPopulation[i+1]=population[i+1];
+			}
+		}
+		return crossedPopulation;
+	}
+	
+	// Mutacja przez inwersję
+	public static int[][] mutationInversion(int[][] population, int m) {
+		int [][] population2 = new int [population.length][population[0].length];
+		Random ran = new Random();
+		
+		for(int i =0; i<population.length; i++) {
+			if(ran.nextInt(100)<m) {
+				int cP1 = ran.nextInt((population[0].length-1));
+				int cP2 = ran.nextInt((population[0].length-(cP1+1))) + (cP1+1);
+				for(int j=0; j<population2[0].length; j++) {
+					if(j>=cP1 && j<cP2) {
+					    //System.out.println("Pętla działa. cP1 i cP2: "+cP1+" " +cP2+" Zamienię "+population2[i][j] +" na "+population[i][cP1+cP2-j-1]);
+						population2[i][j]= population[i][cP1+cP2-j-1];				
+					}
+					else
+						population2[i][j]= population[i][j];
+				}
+			}
+			else
+				population2[i]=population[i];
+		}
+		return population2;
+	}
+	// Mutacja przez zamianę																		
+	public static int[][] mutationReplace(int[][] population, int m) {
+		int [][] population2 = new int [population.length][population[0].length];
+		Random ran = new Random();
+		
+		for(int i =0; i<population.length; i++) {
+			if(ran.nextInt(100)<m) {
+				int index1 = ran.nextInt((population[0].length-1));
+				int index2 = ran.nextInt((population[0].length-1));
+				for(int j=0; j<population2[0].length; j++) {
+					if(j==index1) {
+						population2[i][j]=population[i][index1];
+					}
+					else if(j==index2) {
+						population2[i][j]=population[i][index2];
+					}
+					else {
+						population2[i][j]=population[i][j];
+					}
+				}
+			}
+			else
+				population2[i]=population[i];
+		}
+		return population2;
+	}
+	
+	public static int[] bestResultOfTable(int[] opinionTable) {
+		int[] result = new int[2];
+		int bestResult=opinionTable[0];
+		int indexOfBestResult=0;
+		for(int i=1; i<opinionTable.length; i++) {
+			if(opinionTable[i]<bestResult) {
+				bestResult=opinionTable[i];
+				indexOfBestResult=i;
+			}
+		}
+		result[0]=bestResult;
+		result[1]=indexOfBestResult;
+		return result;
+	}
+
+	// parametr mutacji jest dużo mniejszy, np pkrzyż=75%, a pm=5%
+	
+	public static void main(String[] args) throws IOException {
+		// 1) Pobierz dane z pliku .txt do tabeli
+		// Nazwy miast odpowiadają numerom indeksów tablicy
+		int[][] tablicaMiast = odczytajTablice("berlin52.txt"); 		//wyświetlenie utworzonej tablicy z odległościami między miastami
+		for (int i = 0; i < tablicaMiast.length; i++) {
+		    for (int j = 0; j < tablicaMiast[i].length; j++) {
+		        System.out.print(tablicaMiast[i][j]+ "  ");
+		    }
+		    System.out.println();
+		}
+		System.out.println("Poniżej pierwsza tab osobników");		
+		
+		//dodanie przjeścia przez 5 populacji
+		int t2=0;
+		int[] tabOpi = new int[n];
+		
+		while (t2<5) { 
+			int[][] tablicaOsobnikow =createPopulationTable(n,n); 
+			int[][] crossedPop2 = new int[n][n];
+			int t = 0;
+			int bestResult=1000000000;
+			int bestResultIndex=-1;
+
+			while (t<90000) {
+				tabOpi = newOpinionTable(tabOpi);
+				int[][] newTournamentTab = selectionTournament(tablicaOsobnikow,tabOpi); 
+			
+				int k = 80; //współczynnik krzyżowania 80% //przy UOBX mniej: k=50
+				int k2=50;
+				int m = 5;	//współczynnik mutacji
+				int[][] popTplus1 = new int [n][n];
+
+				popTplus1=crossoverPMX(newTournamentTab, k);
+				crossedPop2 = mutationInversion(popTplus1,m); 
+			
+				tabOpi= opinionTable(tablicaMiast, crossedPop2, n);
+				if(bestResultOfTable(tabOpi)[0]<bestResult) {
+					bestResult=bestResultOfTable(tabOpi)[0];
+					bestResultIndex= bestResultOfTable(tabOpi)[1];
+				
+				}
+			tablicaOsobnikow = crossedPop2;
+			t+=1;
+	    }
+			for(int i =0; i<crossedPop2[0].length-1;i++) {
+				System.out.print(crossedPop2[bestResultIndex][i]+"-");
+			}
+			System.out.print(crossedPop2[bestResultIndex][crossedPop2[0].length-1]+" ");
+			System.out.print(bestResultOfTable(tabOpi)[0]);
+			System.out.println();
+			t2++;
+		}
+
+	}
+	
+}
