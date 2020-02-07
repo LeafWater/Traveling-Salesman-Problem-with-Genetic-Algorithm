@@ -14,7 +14,7 @@ Creating a genetic algorithm can find near-optimal solutions in a short period o
 # Solution of TSP
 To create TSP genetic algorithm were written:
 * Tournament selection and roulette wheel selection (Both are implemented but tournament selection is used because it gives better results.)
-* Several types of crossover: PXM, CX, OX, UOBX
+* Several types of crossover: PMX, CX, OX, UOBX
 * Mutation by swap and mutation by inversion (Better results gives mutation by inversion.)
 
 # Launch
