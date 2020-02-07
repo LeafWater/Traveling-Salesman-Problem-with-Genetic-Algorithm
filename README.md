@@ -20,6 +20,6 @@ To create TSP genetic algorithm were written:
 # Launch
 The repository includes only a code written with JAVA. My purpose is to show my example of creating TSP genetic algorithm. 
 
-File "berlin52_txt" is a sample file with distances between cities. File "berlin52_txt" is to test working an TSP genetic algorithm. 
-In file "berlin52_txt" is written a sample result reached by running the JAVA code.
-"JAVA_code_TSP" could be runned by pasting the code to a JAVA tool (for example Eclipse) and by setting a proper local path to testing file ("berlin52_txt") in the code. 
+File "berlin52.txt" is a sample file with distances between cities. File "berlin52.txt" is to test working an TSP genetic algorithm. 
+In file "berlin52_wynik.txt" is written a sample result reached by running the JAVA code.
+"JAVA_code_TSP.txt" could be runned by pasting the code to a JAVA tool (for example Eclipse) and by setting a proper local path to testing file ("berlin52.txt") in the code. 
